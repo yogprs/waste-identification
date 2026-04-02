@@ -10,9 +10,9 @@ def home():
 def dashboard():
     return render_template('dashboard.html')
 
-@app.route('/identify')
-def identify():
-    return 'identify'
+@app.route('/scan')
+def scan():
+    return render_template('scan.html')
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0',port=3000, debug=True)
