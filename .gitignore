@@ -208,6 +208,6 @@ __marimo__/
 
 app.py.txt
 dataset
-model
+# model
 main.py
-*.pt
+# *.pt
