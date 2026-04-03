@@ -1,0 +1,129 @@
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Live Scan Camera</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.min.js"></script>
+  </head>
+
+  <body>
+    <select
+      id="cameraSelect"
+      style="margin-bottom: 10px; padding: 5px"
+    ></select>
+    <video id="video" autoplay playsinline style="display: none"></video>
+    <br />
+    <img
+      id="resultImage"
+      style="
+        width: 100%;
+        max-width: 640px;
+        border-radius: 8px;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+      "
+    />
+
+    <script>
+      async function getCameras() {
+        // 🚨 WAJIB: trigger permission dulu
+        await navigator.mediaDevices.getUserMedia({ video: true });
+
+        const devices = await navigator.mediaDevices.enumerateDevices();
+        const cameras = devices.filter(
+          (device) => device.kind === "videoinput",
+        );
+
+        const select = document.getElementById("cameraSelect");
+        select.innerHTML = "";
+
+        cameras.forEach((camera, index) => {
+          const option = document.createElement("option");
+          option.value = camera.deviceId;
+          option.text = camera.label || `Camera ${index + 1}`;
+          select.appendChild(option);
+        });
+
+        // 🚀 langsung nyalakan kamera pertama
+        if (cameras.length > 0) {
+          startCamera(cameras[0].deviceId);
+        }
+      }
+
+      getCameras();
+    </script>
+    <script>
+      let currentStream;
+
+      async function startCamera(deviceId) {
+        if (currentStream) {
+          currentStream.getTracks().forEach((track) => track.stop());
+        }
+
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: { deviceId: { exact: deviceId } },
+        });
+
+        // const stream = await navigator.mediaDevices.getUserMedia({
+        //   video: true,
+        // });
+
+        document.getElementById("video").srcObject = stream;
+        currentStream = stream;
+      }
+
+      document.getElementById("cameraSelect").onchange = function () {
+        startCamera(this.value);
+      };
+    </script>
+    <script>
+      const video = document.getElementById("video");
+      const socket = io();
+
+      socket.on("connect", () => {
+        console.log("Socket terhubung!");
+      });
+
+      socket.on("response_back", function (msg) {
+        const resultImg = document.getElementById("resultImage");
+        resultImg.src = msg.image;
+      });
+
+      function sendFrame() {
+        if (video.videoWidth === 0 || video.videoHeight === 0) {
+          return;
+        }
+
+        let width = video.videoWidth;
+        let height = video.videoHeight;
+
+        // Resize set maksimal 640px untuk performance streaming realtime
+        if (width > 640) {
+          const ratio = 640 / width;
+          width = 640;
+          height = height * ratio;
+        }
+
+        const canvas = document.createElement("canvas");
+        canvas.width = width;
+        canvas.height = height;
+
+        const ctx = canvas.getContext("2d");
+        ctx.drawImage(video, 0, 0, width, height);
+
+        const data = canvas.toDataURL("image/jpeg", 0.7); // compress JPEG
+
+        if (!data || data.length < 100) return;
+
+        socket.emit("image", { image: data });
+      }
+
+      video.onloadedmetadata = () => {
+        console.log("Video ready, mulai stream..");
+        // Kirim 10 frames per second (500ms) untuk real-time experience
+
+        // 6 (166ms), 12 (83ms), 24 (41ms) fps
+        setInterval(sendFrame, 600);
+      };
+    </script>
+  </body>
+</html>

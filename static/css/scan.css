@@ -462,6 +462,11 @@ nav.sidebar-nav > :not(:last-child) {
   border-color: var(--primary-color);
 }
 
+.upload-wrap.dragging {
+  border: 2px dashed #10b981;
+  background-color: rgba(16, 185, 129, 0.1);
+}
+
 .upload-icon-wrap {
   width: 80px;
   height: 80px;
